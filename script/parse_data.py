@@ -144,7 +144,7 @@ if __name__ == '__main__':
                     fig_title=f'{csv_file_name}_parsed @ {T}'
                 )
                 plt.close()
-                print(f'Processed: {csv_file}')
+                print(f'Processed: {csv_file_name}_parsed @ {T}')
 
             except Exception as e:
                 print(f'Error processing: {csv_file} - {e}') 
