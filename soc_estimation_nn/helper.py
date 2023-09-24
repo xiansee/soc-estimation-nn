@@ -69,7 +69,7 @@ class XYData:
 def plot(
     xy_data: list[dict],
     x_label: str,
-    y_label: str,
+    y_label: str | dict,
     title: str = '',
     fig_size: tuple[float, float] = (10.0, 7.0),
     show_plt: bool = True,
@@ -83,8 +83,9 @@ def plot(
         List of dictionaries with key value pairs to initialize XYData instance
     x_label : str
         X-axis label
-    y_label : str
-        Y-axis label
+    y_label : str | dict
+        Y-axis label. If subplots are used, provide dictionary with key indicating plot_num
+        and value for Y-axis label.
     title : str, optional
         Title of plot, by default ''
     fig_size : tuple[float, float], optional
@@ -113,10 +114,11 @@ def plot(
     
     xy_data = list(map(lambda d: XYData(**d), xy_data))
     num_of_plots = max(map(lambda d: d.plot_num, xy_data))
-
+    
     fig, axes = plt.subplots(num_of_plots, 1, figsize=fig_size)
     if num_of_plots == 1:
         axes = [axes]
+        y_label = {1: y_label}
 
     for index, data in enumerate(xy_data):
         ax = axes[data.plot_num - 1]
@@ -130,7 +132,7 @@ def plot(
         )
 
         ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
+        ax.set_ylabel(y_label.get(data.plot_num))
         ax.grid(alpha=grid_opacity, linestyle='-')
     
     legend_handles = sum([ax.get_legend_handles_labels()[0] for ax in axes], [])
