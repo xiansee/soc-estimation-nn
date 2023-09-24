@@ -65,7 +65,8 @@ def parse_raw_data(file_path: str) -> pd.DataFrame:
 
 def generate_and_save_plot(
     data_df: pd.DataFrame,
-    save_file_path: str
+    save_file_path: str,
+    fig_title: str = '',
 ) -> None: 
     """
     Generate a plot for parsed raw data and saves figure as png.
@@ -76,6 +77,8 @@ def generate_and_save_plot(
         Parsed data for plotting.
     save_file_path : str
         File path of saved figure.
+    fig_title : str, optional
+        Figure title, by default ''
     """
 
     fig, _ = plot(
@@ -106,6 +109,7 @@ def generate_and_save_plot(
         ],
         x_label=time_col,
         y_label={1: voltage_col, 2: current_col, 3:temperature_col, 4: capacity_col},
+        title=fig_title,
         fig_size=(10, 10),
         show_plt=False
     )
@@ -134,7 +138,11 @@ if __name__ == '__main__':
                 df = parse_raw_data(file_path=f'{raw_data_T_directory}/{csv_file_name}.csv')
                 df.to_csv(f'{parsed_data_T_directory}/{csv_file_name}_parsed.csv', index=False)
 
-                generate_and_save_plot(data_df=df, save_file_path=f'{parsed_data_T_directory}/{csv_file_name}_plot.png')
+                generate_and_save_plot(
+                    data_df=df, 
+                    save_file_path=f'{parsed_data_T_directory}/{csv_file_name}_plot.png',
+                    fig_title=f'{csv_file_name}_parsed @ {T}'
+                )
                 plt.close()
                 print(f'Processed: {csv_file}')
 
