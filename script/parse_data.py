@@ -134,10 +134,14 @@ if __name__ == '__main__':
 
             try:
                 csv_file_name = csv_file.split(".csv")[0]
-
                 df = parse_raw_data(file_path=f'{raw_data_T_directory}/{csv_file_name}.csv')
-                df.to_csv(f'{parsed_data_T_directory}/{csv_file_name}_parsed.csv', index=False)
 
+                #Handles edge case
+                if csv_file_name == '571_Mixed6':
+                    df = df[df[time_col] > 600]
+                    df[time_col] = df[time_col] - df[time_col].iloc[0]
+
+                df.to_csv(f'{parsed_data_T_directory}/{csv_file_name}_parsed.csv', index=False)
                 generate_and_save_plot(
                     data_df=df, 
                     save_file_path=f'{parsed_data_T_directory}/{csv_file_name}_plot.png',
