@@ -68,8 +68,8 @@ class XYData:
 
 def plot(
     xy_data: list[dict],
-    x_label: str,
-    y_label: str | dict,
+    x_label: str = '',
+    y_label: str | dict = {},
     title: str = '',
     fig_size: tuple[float, float] = (10.0, 7.0),
     show_plt: bool = True,
