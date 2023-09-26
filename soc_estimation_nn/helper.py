@@ -118,7 +118,7 @@ def plot(
     fig, axes = plt.subplots(num_of_plots, 1, figsize=fig_size)
     if num_of_plots == 1:
         axes = [axes]
-        y_label = {1: y_label}
+        y_label = {1: y_label} if type(y_label) is str else y_label
 
     for index, data in enumerate(xy_data):
         ax = axes[data.plot_num - 1]
