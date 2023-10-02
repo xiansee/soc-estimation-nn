@@ -1,9 +1,9 @@
 import pandas as pd
 import os
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
-class TimeSeriesDataset(Dataset):
+class BatterySOCDataset(Dataset):
 
     time_col = 'Time [min]'
     voltage_col = 'Normalized Voltage [-]'
@@ -11,39 +11,45 @@ class TimeSeriesDataset(Dataset):
     temperature_col = 'Normalized Temperature [-]'
     soc_col = 'SOC [-]'
 
+
     def __init__(self, data_directory: str):
-        self.data_files = []
-        # for T in os.listdir(data_directory):
-        for T in ['25degC']:
+        self.data = []
+        self.dataset_names = []
+        
+        for T in ['25degC']: # temporarily reducing training data to just one temperature // for T in os.listdir(data_directory):
             T_directory = f'{data_directory}/{T}'
-            file_names = filter(
+            file_names = list(filter(
                 lambda f: f.endswith('parquet'), 
                 os.listdir(T_directory)
-            )
-            self.data_files.extend([f'{T_directory}/{f}' for f in file_names])
+            ))
+            self.data.extend([pd.read_parquet(f'{T_directory}/{f}') for f in file_names])
+            self.dataset_names.extend(file_names)
 
-        self.cached_data = {}
+
+    def get_dataset_name(self, index: int):
+        return self.dataset_names[index]
+    
+
+    def get_time_steps(self, index: int):
+        df = self.data[index]
+        data_length = len(df[self.time_col])
+
+        t = torch.tensor(df[self.time_col], dtype=torch.float32).view(data_length, 1)
+        return t
+
 
     def __len__(self):
-        return len(self.data_files)
+        return len(self.data)
+
 
     def __getitem__(self, index: int):
-        if index in self.cached_data.keys():
-            return self.cached_data.get(index)
-        
-        df = pd.read_parquet(self.data_files[index])
-        t_col = self.time_col
+        df = self.data[index]
+
         X_cols = [self.voltage_col, self.current_col, self.temperature_col]
         Y_col = self.soc_col
-        data_length = len(df[t_col])
+        data_length = len(df[self.time_col])
 
-        t = torch.tensor(df[t_col], dtype=torch.float32).view(data_length, 1)
-        X = torch.stack([torch.tensor(df[col], dtype=torch.float32) for col in X_cols], dim=1) #.view(1, len(voltage), 3)
+        X = torch.stack([torch.tensor(df[col], dtype=torch.float32) for col in X_cols], dim=1)
         Y = torch.tensor(df[Y_col], dtype=torch.float32).view(data_length, 1)
 
-        self.cached_data[index] = t, X, Y
-        
-        return t, X, Y
-
-
-        
+        return X, Y
