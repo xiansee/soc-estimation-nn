@@ -18,16 +18,6 @@ soc_col = 'SOC [-]'
 parsed_data_directory = '../data/parsed'
 processed_data_directory = '../data/processed'
 
-normalization_settings = {
-    voltage_col: (2.70, 4.25),
-    current_col: (-20, 10),
-    temperature_col: (-25, 45)
-}
-normalize_col_name = lambda col: f'Normalized {col.split(" [")[0]} [-]'
-norm_voltage_col = normalize_col_name(voltage_col)
-norm_current_col = normalize_col_name(current_col)
-norm_temperature_col = normalize_col_name(temperature_col)
-
 
 def get_pOCV_SOC_interp_fn(file_path: str) -> interp1d:
     """
@@ -81,36 +71,6 @@ def estimate_soc(
     return df
 
 
-def normalize_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize time series voltage, current and temperature data.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Time series data
-
-    Returns
-    -------
-    pd.DataFrame
-        Time series data with normalized values
-    """
-
-    df = df[[time_col, voltage_col, current_col, temperature_col, soc_col]].copy(deep=True)
-
-    for col, norm_range in normalization_settings.items():
-        min_value, max_value = norm_range
-        df[col] = (df[col] - min_value) / (max_value - min_value) * 2 - 1
-
-    df = df.rename(columns={
-        voltage_col: norm_voltage_col,
-        current_col: norm_current_col,
-        temperature_col: norm_temperature_col
-    })
-
-    return df
-
-
 def generate_and_save_plot(
     data_df: pd.DataFrame,
     save_file_path: str,
@@ -133,37 +93,44 @@ def generate_and_save_plot(
         xy_data=[
             {
                 'x_data': data_df[time_col],
-                'y_data': data_df[norm_voltage_col],
-                'label': 'Normalized Voltage',
+                'y_data': data_df[voltage_col],
+                'label': 'Voltage',
             },
             {
                 'x_data': data_df[time_col],
-                'y_data': data_df[norm_current_col],
-                'label': 'Normalized Current',
+                'y_data': data_df[current_col],
+                'label': 'Current',
                 'plot_num': 2
             },
             {
                 'x_data': data_df[time_col],
-                'y_data': data_df[norm_temperature_col],
-                'label': 'Normalized Temperature',
+                'y_data': data_df[temperature_col],
+                'label': 'Temperature',
                 'plot_num': 3
+            },
+            {
+                'x_data': data_df[time_col],
+                'y_data': data_df[capacity_col],
+                'label': 'Capacity',
+                'plot_num': 4
             },
             {
                 'x_data': data_df[time_col],
                 'y_data': data_df[soc_col],
                 'label': 'SOC',
-                'plot_num': 4
+                'plot_num': 5
             },
         ],
         x_label=time_col,
         y_label={
-            1: norm_voltage_col, 
-            2: norm_current_col, 
-            3: norm_temperature_col, 
-            4: soc_col
+            1: voltage_col, 
+            2: current_col, 
+            3: temperature_col, 
+            4: capacity_col,
+            5: soc_col
         },
         title=fig_title,
-        fig_size=(10, 10),
+        fig_size=(10, 12.5),
         show_plt=False
     )
 
@@ -192,20 +159,19 @@ if __name__ == '__main__':
         for csv_file in csv_files:
 
             try:
-                csv_file_name = csv_file.split(".csv")[0]
+                csv_file_name = csv_file.split("_parsed.csv")[0]
 
                 df = pd.read_csv(f'{parsed_data_T_directory}/{csv_file}')
                 df = estimate_soc(df, get_soc_fn=get_soc)
-                df = normalize_data(df)
                 df.to_parquet(f'{processed_data_T_directory}/{csv_file_name}.parquet', index=False)
 
                 generate_and_save_plot(
                     data_df=df, 
                     save_file_path=f'{processed_data_T_directory}/{csv_file_name}_plot.png',
-                    fig_title=f'{csv_file_name}_processed @ {T}'
+                    fig_title=f'{csv_file_name} @ {T}'
                 )
                 plt.close()
-                print(f'Processed {csv_file_name}_processed @ {T}')
+                print(f'Processed {csv_file_name} @ {T}')
 
             except Exception as e:
                 print(f'Error processing {csv_file} - {e}')
