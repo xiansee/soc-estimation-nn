@@ -1,47 +1,91 @@
-from torchmetrics import Metric
-from torch import nn, Tensor
 import torch
+from abc import ABC, abstractmethod
 
 
-class RMSELoss(nn.Module):
+class Metric(ABC):
 
-	def __init__(self):
-		super().__init__()
 
-	def forward(self, x, y):
-		mse_loss_fn = nn.MSELoss()
-		rmse_loss = torch.sqrt(mse_loss_fn(x, y))
-		return rmse_loss
+	def __init__(
+		self,
+		compute_on_before_zero_grad: bool = False,
+		compute_on_train_epoch_end: bool = False,
+		compute_on_validation_epoch_end: bool = False,
+	):
+		self._compute_on_before_zero_grad = compute_on_before_zero_grad
+		self._compute_on_train_epoch_end = compute_on_train_epoch_end
+		self._compute_on_validation_epoch_end = compute_on_validation_epoch_end
+
 	
 	@property
+	@abstractmethod
 	def name(self):
-		return 'Root Mean Square Error'
-	
+		raise NotImplementedError
 
-class MaxAbsoluteError(nn.Module):
 
-	def __init__(self):
-		super().__init__()
-
-	def forward(self, x, y):
-		return torch.max(torch.abs(x - y))
-	
-	@property
-	def name(self):
-		return 'Max Absolute Error'
-	
-
-class TensorNorm(Metric):
-
-	full_state_update: bool = False
-    
-	def __init__(self):
-		super().__init__()
-		self.add_state('value', default=torch.tensor(0), dist_reduce_fx='mean')
-
-	def update(self, gradient_tensor: Tensor):
-		self.value = torch.norm(gradient_tensor)
-
+	@abstractmethod
 	def compute(self):
-		return self.value.float()
+		raise NotImplementedError
+
+
+	@property
+	def compute_on_before_zero_grad(self):
+		return self._compute_on_before_zero_grad
+	
+	
+	@property
+	def compute_on_train_epoch_end(self):
+		return self._compute_on_train_epoch_end
+    
+
+	@property
+	def compute_on_validation_epoch_end(self):
+		return self._compute_on_validation_epoch_end
+	
+	
+class GradientNorms(Metric):
+
+
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+
+
+	@property
+	def name(self):
+		return 'GradientNorms'
+
+
+	def compute(
+		self, 
+		trainer, 
+		training_module
+	) -> dict[str, float]:
+
+		return dict([
+			( f'grad_norm({name})', float(torch.norm(parameter.grad)))  \
+			for name, parameter in training_module.model.named_parameters() if parameter.grad is not None
+		])
+	
+
+class WeightsAndBiasesNorms(Metric):
+
+
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+
+
+	@property
+	def name(self):
+		return 'WeightsAndBiasesNorms'
+
+
+	def compute(
+		self, 
+		trainer, 
+		training_module
+	) -> dict[str, float]:
+
+		return dict([
+			( f'norm({name})', float(torch.norm(parameter)))  \
+			for name, parameter in training_module.model.named_parameters() if parameter is not None
+		])
     
