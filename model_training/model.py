@@ -1,7 +1,8 @@
 from torch import nn, Tensor
 
 
-class SOCEstNN(nn.Module):
+class LSTM(nn.Module):
+
 
 	def __init__(
 		self, 
@@ -18,6 +19,7 @@ class SOCEstNN(nn.Module):
 
 		self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_lstm_layers)
 		self.fc_layer = nn.Linear(in_features=hidden_size, out_features=output_size)
+		
 
 	def forward(
 		self, 
