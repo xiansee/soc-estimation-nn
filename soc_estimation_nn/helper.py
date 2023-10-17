@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes._axes import Axes
 from dataclasses import dataclass
+import numpy as np
 
 
 @dataclass(frozen=True)
@@ -152,4 +153,35 @@ def plot(
         plt.show()
 
     return fig, axes
+
+
+def round_to_sig_fig(
+    x: float,
+    sig_fig: int
+) -> float:
+    """
+    Round a float to a specified number of significant figures.
+
+    Parameters
+    ----------
+    x : float
+        Number to be rounded
+    sig_fig : int
+        Number of significant figures to be rounded to
+
+    Returns
+    -------
+    float
+        Number rounded to the specified number of significant figures.
+
+    Raises
+    ------
+    TypeError
+        If sig_fig is not an integer
+    """
+
+    if not isinstance(sig_fig, int):
+        raise TypeError(f'sig_fig need to be of type int.') 
+
+    return float(np.format_float_positional(x, precision=sig_fig, fractional=False, trim='k'))
 

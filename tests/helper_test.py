@@ -1,4 +1,5 @@
-from soc_estimation_nn.helper import XYData, plot
+import pytest
+from soc_estimation_nn.helper import XYData, plot, round_to_sig_fig
 
 
 def test_XYData():
@@ -56,3 +57,13 @@ def test_plot():
     assert all(axes[0].get_children()[0].get_ydata() == [5,4,3,2,1])
     assert all(axes[1].get_children()[0].get_ydata() == [3,3,3,3,3])
 
+
+def test_round_to_sig_fig():
+    x1 = 1.2345111
+    x2 = 0.00012999
+    
+    assert round_to_sig_fig(x1, 5) == 1.2345
+    assert round_to_sig_fig(x2, 2) == 0.00013
+
+    with pytest.raises(TypeError):
+        round_to_sig_fig(0, sig_fig=2.51)
