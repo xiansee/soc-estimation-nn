@@ -1,6 +1,7 @@
 from torch import nn, optim
 import lightning.pytorch as pl
 from soc_estimation_nn.logger import TrainingLogger
+import torch
 
 
 class TrainingModule(pl.LightningModule):
@@ -27,11 +28,23 @@ class TrainingModule(pl.LightningModule):
 		batch, 
 		batch_idx
 	):
-		X, SOC = batch
-		SOC_pred = self.model(X)
-		loss = self.loss_fn(SOC, SOC_pred)
+		X, Y = batch
+		Y_pred = self.model(X)
+		training_loss = self.loss_fn(Y, Y_pred)
 
-		return loss
+		self.log(
+			'training_loss', 
+			training_loss, 
+			on_epoch=True, 
+			on_step=False, 
+			prog_bar=True
+		)
+
+		return {
+			'loss': training_loss,
+			'Y': Y,
+			'Y_pred': Y_pred
+		}
 	
 
 	def validation_step(
@@ -39,12 +52,31 @@ class TrainingModule(pl.LightningModule):
 		batch, 
 		batch_idx
 	):
-		X, SOC = batch
-		SOC_pred = self.model(X)
-		validation_accuracy = self.loss_fn(SOC, SOC_pred)
-		self.log('validation_accuracy', validation_accuracy, on_epoch=True, on_step=False, prog_bar=True)
+		X, Y = batch
+		Y_pred = self.model(X)
+		validation_accuracy = self.loss_fn(Y, Y_pred)
+
+		self.log(
+			'validation_accuracy', 
+			validation_accuracy, 
+			on_epoch=True, 
+			on_step=False, 
+			prog_bar=True
+		)
+
+		return {
+			'loss': validation_accuracy,
+			'Y': Y,
+			'Y_pred': Y_pred
+		}
 	
+		
 
 	def configure_optimizers(self):
-		optimizer = optim.Adam(self.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
+		optimizer = optim.Adam(
+			self.parameters(), 
+			lr=self.initial_lr, 
+			weight_decay=self.weight_decay
+		)
+
 		return optimizer
