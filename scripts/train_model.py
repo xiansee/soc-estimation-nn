@@ -3,7 +3,7 @@ sys.path.append('../')
 from model_training.model import LSTM
 from model_training.dataset import BatterySOCDataset
 from soc_estimation_nn.loss import RMSE
-from soc_estimation_nn.metric import GradientNorms, WeightsAndBiasesNorms
+from soc_estimation_nn.metric import GradientNorms, WeightsAndBiasesNorms, ValidationRMSE, TrainingRMSE, ValidationMaxAbsoluteError
 from soc_estimation_nn.training import TrainingModule
 from soc_estimation_nn.logger import TrainingLogger
 from soc_estimation_nn.data_module import DataModule
@@ -27,19 +27,16 @@ logger = TrainingLogger(
 	log_directory=root_directory,
 	stream_log=True
 )
-logger.log_info('Init training ...')
 
-
-metrics = [
-	GradientNorms(compute_on_before_zero_grad=True),
-	WeightsAndBiasesNorms(compute_on_train_epoch_end=True)
-]
-
-for metric in metrics:
-	logger.track(metric)
-	logger.log_info(f'Tracking metric: {metric.name}')
-
-
+for metric in [
+	GradientNorms(),
+	WeightsAndBiasesNorms(),
+	ValidationRMSE(),
+	TrainingRMSE(),
+	ValidationMaxAbsoluteError(),
+]:
+	logger.track_metric(metric)
+	
 early_stop = EarlyStopping(
 	monitor='validation_accuracy', 
 	min_delta=0.001, 
@@ -48,6 +45,7 @@ early_stop = EarlyStopping(
 	stopping_threshold=0.01, 
 	check_on_train_epoch_end=True
 )
+
 training_module = TrainingModule(
 	model=model, 
 	training_logger=logger,
@@ -58,15 +56,22 @@ training_module = TrainingModule(
 
 trainer = pl.Trainer(
 	default_root_dir=root_directory,
-	max_epochs=10, 
+	max_epochs=5, 
 	logger=False,
 	callbacks=[early_stop, logger],
+	enable_progress_bar=False,
+	enable_model_summary=False,
+	enable_checkpointing=True,
 )
-logger.log_info('Starting training ...')
+
+import time
+
+start_time = time.time()
 
 trainer.fit(
 	training_module, 
 	data_module, 
 )	
 
-logger.log_info('Training complete.')
+print(f'Total time: {time.time() - start_time}')
+
