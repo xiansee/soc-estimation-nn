@@ -11,6 +11,9 @@ from soc_estimation_nn.metric import Metric
 from torch.optim import Optimizer
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback
+from optuna.trial import Trial
+from optuna.study import Study
+import math
 
 
 class TrainingLogger(Callback):
@@ -43,13 +46,32 @@ class TrainingLogger(Callback):
 
         self.metrics_tracker = []
 
+        self.trial_number = 0
+        self.trial_start_timestamp = float('nan')
         self.training_start_timestamp = float('nan')
         self.epoch_start_timestamp = float('nan')
+        self.val_acc = float('nan')
 
 
     @property
     def name(self):
         return f'{self.init_time}-{self.training_name}'
+    
+
+    @property
+    def trial_number(self) -> int:
+        return self._trial_number
+    
+
+    @trial_number.setter
+    def trial_number(
+        self, 
+        trial_number: int
+    ) -> None:
+        if not isinstance(trial_number, int):
+            raise Exception('trial_number needs to be of type int.')
+        
+        self._trial_number = trial_number
 
 
     def log_info(
@@ -78,6 +100,69 @@ class TrainingLogger(Callback):
 
             metric_values = ','.join([str(v) for v in metric_data.values()])
             csv_file.write(f'{metric_values}\n')
+
+
+    def log_trial(
+        self,
+        trial: Trial,
+        trainer_metrics: dict
+    ) -> None:
+        
+        file_name = f'{self.log_directory}/HyperparametersTuning.csv'
+        log_header = not os.path.isfile(file_name)  
+
+        with open(file_name, 'a') as csv_file:
+
+            if log_header:
+                hyperparam_header = ','.join([
+                    'trial_num', 
+                    *[str(hdr) for hdr in trial.params.keys()], 
+                    *[str(hdr) for hdr in trainer_metrics.keys()]
+                ])
+                csv_file.write(f'{hyperparam_header}\n')
+
+            hyperparam_values = ','.join([
+                str(trial.number), 
+                *[str(v) for v in trial.params.values()], 
+                *[str(float(v)) for v in trainer_metrics.values()]
+            ])
+            csv_file.write(f'{hyperparam_values}\n')
+
+
+    def log_hyperparameters(
+        self,
+        trial_params: dict
+    ) -> None:
+        
+        hyperparams = ', '.join([f'{param}={round_to_sig_fig(float(value), 4)}' for param, value in trial_params.items()])
+        self.logger.info('')
+        self.log_info(f'Hyperparameters for Trial {self.trial_number}: {hyperparams}')
+
+
+    def log_best_hyperparams(
+        self,
+        study: Study,
+    ) -> None:
+        best_objective = study.best_value
+        best_trial_num = study.best_trial.number
+        best_parameters = study.best_params
+
+
+        if self.trial_start_timestamp:
+            hyperparam_tuning_time = str(timedelta(
+                seconds=round(time.time() - self.trial_start_timestamp)
+            )) 
+            
+        else:
+            hyperparam_tuning_time = float('nan')
+
+        self.logger.info('')
+        self.log_info(f'Hyperparameters tuning completed in {hyperparam_tuning_time} (hr:min:sec).')
+        best_hyperparams = ', '.join([f'{param}={round_to_sig_fig(float(value), 4)}' for param, value in best_parameters.items()])
+        best_validation_accuracy = str(round_to_sig_fig(float(best_objective), 4))
+
+        self.log_info(f'Trial {best_trial_num} has the best validation accuracy at {best_validation_accuracy}')
+        self.log_info(f'Best hyperparameters (from Trial {best_trial_num}): {best_hyperparams}')
 
 
     def track_metrics(
@@ -117,6 +202,7 @@ class TrainingLogger(Callback):
                         self.log_metric(
                             metric_name=metric.name,
                             metric_data={
+                                'trial_num': self.trial_number,
                                 'epoch_num': epoch_num,
                                 'global_step': global_step,
                                 **metric_values
@@ -132,7 +218,8 @@ class TrainingLogger(Callback):
         trainer: pl.Trainer, 
         pl_module: pl.LightningModule,
     ):
-        self.log_info('Training started.')
+        self.log_info(f'Training started for Trial {self.trial_number}.')
+        self.trial_start_timestamp = time.time() if math.isnan(self.trial_start_timestamp) else self.trial_start_timestamp
         self.training_start_timestamp = time.time()
 
 
@@ -150,7 +237,7 @@ class TrainingLogger(Callback):
         else:
             training_time = float('nan')
 
-        self.log_info(f'Fit completed in {training_time} (hr:min:sec).')
+        self.log_info(f'Fit completed for Trial {self.trial_number} in {training_time} (hr:min:sec).')
     
 
     @compute_and_log_metrics
@@ -192,13 +279,14 @@ class TrainingLogger(Callback):
         if global_step == 0:
             return
 
-        training_loss = round_to_sig_fig(float(trainer.logged_metrics.get('training_loss', 'nan')), 6)
-        validation_accuracy = round_to_sig_fig(float(trainer.logged_metrics.get('validation_accuracy', 'nan')), 6)
-        time_per_epoch = round_to_sig_fig((time.time() - self.epoch_start_timestamp) * 1000, 6) if self.epoch_start_timestamp else float('nan')
+        training_loss = round_to_sig_fig(float(trainer.logged_metrics.get('training_loss', 'nan')), 4)
+        validation_accuracy = round_to_sig_fig(float(trainer.logged_metrics.get('validation_accuracy', 'nan')), 4)
+        time_per_epoch = round_to_sig_fig((time.time() - self.epoch_start_timestamp) * 1000, 4) if self.epoch_start_timestamp else float('nan')
         cpu_usage = psutil.cpu_percent() # %
         mem_usage = round_to_sig_fig(psutil.virtual_memory().used / 10 ** 9, 4) # GB
 
         self.log_info((
+            f'trial_number={self.trial_number}, '
             f'epoch={epoch_num}, '
             f'global_step={global_step}, '
             f'training_loss={training_loss}, '
@@ -210,13 +298,14 @@ class TrainingLogger(Callback):
         self.log_metric(
             metric_name='TrainingAndValidationLoss',
             metric_data={
+                'trial_number': self.trial_number,
                 'epoch_num': epoch_num,
                 'global_step': global_step,
                 'training_loss': training_loss,
                 'validation_accuracy': validation_accuracy,
             }
         )
-
+        self.val_acc = validation_accuracy
 
     @compute_and_log_metrics
     def on_validation_batch_end(self, 

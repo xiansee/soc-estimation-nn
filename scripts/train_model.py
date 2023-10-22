@@ -10,6 +10,7 @@ from soc_estimation_nn.data_module import DataModule
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 import lightning.pytorch as pl
 from datetime import datetime
+import optuna
  
 
 dataset = BatterySOCDataset(data_directory='../data/processed')
@@ -45,25 +46,53 @@ early_stop = EarlyStopping(
 	check_on_train_epoch_end=True
 )
 
-training_module = TrainingModule(
-	model=model, 
-	loss_function=RMSE(),
-	initial_lr=0.01,
-	weight_decay=0.002
+def define_trainer(trial):
+	lr = trial.suggest_float('learning_rate', 1e-3, 1e-1, log=True)
+	wd = trial.suggest_float('weight_decay', 1e-3, 1e-2)
+
+	training_module = TrainingModule(
+		model=model, 
+		loss_function=RMSE(),
+		initial_lr=lr,
+		weight_decay=wd
+	)
+
+	return training_module
+
+def objective(trial):
+	logger.trial_number = trial.number
+	
+	training_module = define_trainer(trial)	
+	trainer = pl.Trainer(
+		default_root_dir=root_directory,
+		max_epochs=50, 
+		logger=False,
+		callbacks=[early_stop, logger],
+		enable_progress_bar=False,
+		enable_model_summary=False,
+		enable_checkpointing=True,
+	)
+
+	logger.log_hyperparameters(
+		trial_params=trial.params
+	)
+
+	trainer.fit(
+		training_module, 
+		data_module, 
+	)	
+	
+	logger.log_trial(
+		trial=trial, 
+		trainer_metrics=trainer.logged_metrics
+	)
+
+	validation_accuracy = trainer.logged_metrics.get('validation_accuracy')
+	return validation_accuracy
+
+study = optuna.create_study()
+study.optimize(objective, n_trials=10)
+
+logger.log_best_hyperparams(
+	study=study
 )
-
-trainer = pl.Trainer(
-	default_root_dir=root_directory,
-	max_epochs=5, 
-	logger=False,
-	callbacks=[early_stop, logger],
-	enable_progress_bar=False,
-	enable_model_summary=False,
-	enable_checkpointing=True,
-)
-
-trainer.fit(
-	training_module, 
-	data_module, 
-)	
-
