@@ -28,14 +28,13 @@ logger = TrainingLogger(
 	stream_log=True
 )
 
-for metric in [
+logger.track_metrics([
 	GradientNorms(),
 	WeightsAndBiasesNorms(),
 	ValidationRMSE(),
 	TrainingRMSE(),
 	ValidationMaxAbsoluteError(),
-]:
-	logger.track_metric(metric)
+])
 	
 early_stop = EarlyStopping(
 	monitor='validation_accuracy', 
@@ -48,7 +47,6 @@ early_stop = EarlyStopping(
 
 training_module = TrainingModule(
 	model=model, 
-	training_logger=logger,
 	loss_function=RMSE(),
 	initial_lr=0.01,
 	weight_decay=0.002
@@ -64,14 +62,8 @@ trainer = pl.Trainer(
 	enable_checkpointing=True,
 )
 
-import time
-
-start_time = time.time()
-
 trainer.fit(
 	training_module, 
 	data_module, 
 )	
-
-print(f'Total time: {time.time() - start_time}')
 

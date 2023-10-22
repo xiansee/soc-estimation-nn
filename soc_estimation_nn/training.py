@@ -1,7 +1,6 @@
 from torch import nn, optim
 import lightning.pytorch as pl
 from soc_estimation_nn.logger import TrainingLogger
-import torch
 
 
 class TrainingModule(pl.LightningModule):
@@ -10,14 +9,12 @@ class TrainingModule(pl.LightningModule):
 	def __init__(
 		self, 
 		model: nn.Module, 
-		training_logger: TrainingLogger,
 		loss_function: nn.Module,
 		initial_lr: float = 0.01,
 		weight_decay: float = 0.001
 	):
 		super().__init__()
 		self.model = model
-		self.training_logger = training_logger
 		self.loss_fn = loss_function
 		self.initial_lr = initial_lr
 		self.weight_decay = weight_decay
