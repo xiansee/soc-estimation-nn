@@ -52,6 +52,8 @@ class TrainingLogger(Callback):
         self.epoch_start_timestamp = float('nan')
         self.val_acc = float('nan')
 
+        #TODO: log every n epoch
+
 
     @property
     def name(self):
@@ -69,7 +71,10 @@ class TrainingLogger(Callback):
         trial_number: int
     ) -> None:
         if not isinstance(trial_number, int):
-            raise Exception('trial_number needs to be of type int.')
+            raise Exception('Trial_number needs to be of type int.')
+        
+        if trial_number < 0:
+            raise Exception('Invalid trial_number, should be >= 0')
         
         self._trial_number = trial_number
 
@@ -136,6 +141,7 @@ class TrainingLogger(Callback):
         
         hyperparams = ', '.join([f'{param}={round_to_sig_fig(float(value), 4)}' for param, value in trial_params.items()])
         self.logger.info('')
+        self.log_info(f'Trial {self.trial_number}')
         self.log_info(f'Hyperparameters for Trial {self.trial_number}: {hyperparams}')
 
 
@@ -161,7 +167,7 @@ class TrainingLogger(Callback):
         best_hyperparams = ', '.join([f'{param}={round_to_sig_fig(float(value), 4)}' for param, value in best_parameters.items()])
         best_validation_accuracy = str(round_to_sig_fig(float(best_objective), 4))
 
-        self.log_info(f'Trial {best_trial_num} has the best validation accuracy at {best_validation_accuracy}')
+        self.log_info(f'Trial {best_trial_num} has the best validation accuracy at {best_validation_accuracy}.')
         self.log_info(f'Best hyperparameters (from Trial {best_trial_num}): {best_hyperparams}')
 
 
@@ -177,6 +183,8 @@ class TrainingLogger(Callback):
 
             if metric in self.metrics_tracker:
                 continue
+
+            #TODO: verify metric is trackable
             
             self.metrics_tracker.append(metric)
             self.log_info(f'Tracking metric: {metric.name}')
@@ -306,6 +314,7 @@ class TrainingLogger(Callback):
             }
         )
         self.val_acc = validation_accuracy
+
 
     @compute_and_log_metrics
     def on_validation_batch_end(self, 
