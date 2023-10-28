@@ -11,11 +11,7 @@ class RMSE(nn.Module):
 		mse_loss_fn = nn.MSELoss()
 		rmse = torch.sqrt(mse_loss_fn(x, y))
 		return rmse
-	
-	@property
-	def name(self):
-		return 'Root Mean Square Error'
-	
+		
 
 class MaxAbsoluteError(nn.Module):
 
@@ -25,6 +21,3 @@ class MaxAbsoluteError(nn.Module):
 	def forward(self, x, y):
 		return torch.max(torch.abs(x - y))
 	
-	@property
-	def name(self):
-		return 'Max Absolute Error'
