@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class BatterySOCDataset(Dataset):
+class DatasetV1(Dataset):
 
     time_col = 'Time [min]'
     voltage_col = 'Voltage [V]'
@@ -29,7 +29,11 @@ class BatterySOCDataset(Dataset):
                 lambda f: f.endswith('parquet'), 
                 os.listdir(T_directory)
             ))
-            self.data.extend([pd.read_parquet(f'{T_directory}/{f}') for f in file_names])
+
+            self.data.extend([
+                self.normalize_data(pd.read_parquet(f'{T_directory}/{f}')) \
+                for f in file_names
+            ])
             self.dataset_names.extend(file_names)
             break    
 
@@ -48,7 +52,6 @@ class BatterySOCDataset(Dataset):
 
     def __getitem__(self, index: int):
         df = self.data[index]
-        df = self.normalize_data(df)
 
         X_cols = [self.voltage_col, self.current_col, self.temperature_col]
         Y_col = self.soc_col

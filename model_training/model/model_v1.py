@@ -1,7 +1,7 @@
 from torch import nn, Tensor
 
 
-class LSTM(nn.Module):
+class ModelV1(nn.Module):
 
 
 	def __init__(
