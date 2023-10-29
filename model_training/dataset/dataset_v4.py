@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class DatasetV3(Dataset):
+class DatasetV4(Dataset):
 
     timestamp_col = 'Timestamp'
     time_col = 'Time [min]'
@@ -64,7 +64,7 @@ class DatasetV3(Dataset):
     def __getitem__(self, index: int):
         df = self.data[index]
 
-        X_cols = [self.voltage_col, self.current_col, self.temperature_col, self.capacity_col]
+        X_cols = [self.voltage_col, self.temperature_col, self.capacity_col]
         Y_col = self.soc_col
         data_length = len(df[self.time_col])
 
