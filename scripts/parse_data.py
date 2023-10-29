@@ -44,16 +44,17 @@ def parse_raw_data(file_path: str) -> pd.DataFrame:
     column_line = lines[column_index].split(',')
     data_lines = [l.split(',') for l in lines[column_index + 2:]]
     
+    abs_timestamp_data = []
     timestamp_data = []
     for l in data_lines:
-        try:
-            timestamp_data.append(datetime.strptime(l[column_line.index('Time Stamp')], '%m/%d/%Y %I:%M:%S %p'))
-        except ValueError:
-            timestamp_data.append(datetime.strptime(l[column_line.index('Time Stamp')], '%m/%d/%Y'))
+        abs_timestamp_data.append(pd.Timestamp(l[column_line.index('Time Stamp')]))
+        timestamp_str = [float(s) for s in l[column_line.index('Prog Time')].split(':')]
+        timestamp = timestamp_str[0] * 3600 + timestamp_str[1] * 60 + timestamp_str[2]
+        timestamp_data.append(timestamp)
 
     df = pd.DataFrame({
-        timestamp_col: timestamp_data,
-        time_col: [(dt - timestamp_data[0]).total_seconds() / 60 for dt in timestamp_data],
+        timestamp_col: abs_timestamp_data,
+        time_col: [(dt - timestamp_data[0]) / 60 for dt in timestamp_data],
         voltage_col: [float(l[column_line.index('Voltage')]) for l in data_lines],
         current_col: [float(l[column_line.index('Current')]) for l in data_lines],
         temperature_col: [float(l[column_line.index('Temperature')]) for l in data_lines],
@@ -135,11 +136,6 @@ if __name__ == '__main__':
             try:
                 csv_file_name = csv_file.split(".csv")[0]
                 df = parse_raw_data(file_path=f'{raw_data_T_directory}/{csv_file_name}.csv')
-
-                #Handles edge case
-                if csv_file_name == '571_Mixed6':
-                    df = df[df[time_col] > 600]
-                    df[time_col] = df[time_col] - df[time_col].iloc[0]
 
                 df.to_csv(f'{parsed_data_T_directory}/{csv_file_name}_parsed.csv', index=False)
                 generate_and_save_plot(
