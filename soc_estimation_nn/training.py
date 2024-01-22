@@ -1,5 +1,6 @@
-from torch import nn, optim
 import lightning.pytorch as pl
+from torch import nn, optim
+
 from soc_estimation_nn.logger import TrainingLogger
 
 

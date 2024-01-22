@@ -5,16 +5,18 @@ from model_training.dataset.dataset_v1 import DatasetV1
 from model_training.dataset.dataset_v2 import DatasetV2
 from model_training.dataset.dataset_v3 import DatasetV3
 from model_training.dataset.dataset_v4 import DatasetV4
+from model_training.dataset.dataset_v5 import DatasetV5
+from model_training.dataset.dataset_v6 import DatasetV6
 import numpy as np
 import pickle
 import pandas as pd
 
 
-training_dates = ['2023_10_29_T16_49_44Z', '2023_10_29_T19_22_45Z', '2023_10_29_T20_04_56Z', '2023_10_29_T19_45_23Z']
-trial_nums = [36, 2, 53, 88]
-datasets = [DatasetV1, DatasetV2, DatasetV3, DatasetV4]
+training_dates = ['2023_10_29_T19_45_23Z', '2023_10_31_T03_01_46Z', '2023_10_31_T03_12_28Z']
+trial_nums = [88, 81, 21]
+datasets = [DatasetV4, DatasetV5, DatasetV6]
 model_pred = []
-dataset_index = 5
+dataset_index = 12
 main_dataset = DatasetV1(data_directory='../data/processed')
 csv_file = main_dataset.dataset_names[dataset_index]
 main_df = pd.read_parquet(f'../data/processed/25degC/{csv_file}')

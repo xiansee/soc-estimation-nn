@@ -1,26 +1,36 @@
 import sys
+
 sys.path.append('../')
-from model_training.model.model_v1 import ModelV1
-from model_training.model.model_v2 import ModelV2
+import os
+import pickle
+from datetime import datetime
+
+import lightning.pytorch as pl
+import optuna
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
+
 from model_training.dataset.dataset_v1 import DatasetV1
 from model_training.dataset.dataset_v2 import DatasetV2
 from model_training.dataset.dataset_v3 import DatasetV3
 from model_training.dataset.dataset_v4 import DatasetV4
-from soc_estimation_nn.loss import RMSE
-from soc_estimation_nn.metric import GradientNorms, WeightsAndBiasesNorms, ValidationRMSE, TrainingRMSE, ValidationMaxAbsoluteError
-from soc_estimation_nn.training import TrainingModule
-from soc_estimation_nn.logger import TrainingLogger
+from model_training.dataset.dataset_v5 import DatasetV5
+from model_training.dataset.dataset_v6 import DatasetV6
+from model_training.model.model_v1 import ModelV1
+from model_training.model.model_v2 import ModelV2
 from soc_estimation_nn.data_module import DataModule
-from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-import lightning.pytorch as pl
-from datetime import datetime
-import optuna
-import pickle
-import os
- 
+from soc_estimation_nn.logger import TrainingLogger
+from soc_estimation_nn.loss import RMSE
+from soc_estimation_nn.metric import (
+	GradientNorms,
+	TrainingRMSE,
+	ValidationMaxAbsoluteError,
+	ValidationRMSE,
+	WeightsAndBiasesNorms,
+)
+from soc_estimation_nn.training import TrainingModule
 
 Model = 'ModelV1'
-Dataset = 'DatasetV3'
+Dataset = 'DatasetV6'
 root_directory = f'../model_training/training_logs/{datetime.utcnow().strftime("%Y_%m_%d_T%H_%M_%SZ")}'
 trained_model_directory = f'{root_directory}/trained_models/'
 
@@ -56,7 +66,7 @@ def define_model(trial):
 	num_of_layers = trial.suggest_int('lstm_layers', 1, 4)
 
 	model = Model(
-		input_size=4, 
+		input_size=3, 
 		hidden_size=hidden_size,
 		output_size=1, 
 		num_lstm_layers=num_of_layers,

@@ -1,11 +1,11 @@
-import os
-
 import pandas as pd
+import os
 import torch
 from torch.utils.data import Dataset
+import random
 
 
-class DatasetV4(Dataset):
+class DatasetV5(Dataset):
 
     timestamp_col = 'Timestamp'
     time_col = 'Time [min]'
@@ -34,7 +34,7 @@ class DatasetV4(Dataset):
             ))
 
             self.data.extend([
-                self.normalize_data(self.downsample_data(pd.read_parquet(f'{T_directory}/{f}'))) \
+                self.normalize_data(self.downsample_data(self.truncate_data(pd.read_parquet(f'{T_directory}/{f}')))) \
                 for f in file_names
             ])
             self.dataset_names.extend(file_names)
@@ -56,6 +56,14 @@ class DatasetV4(Dataset):
         df = df.dropna()
 
         return df
+    
+
+    def truncate_data(self, df:pd.DataFrame) -> pd.DataFrame:
+        starting_soc = random.randrange(65, 100)/100
+        df = df[df[self.soc_col] < starting_soc]
+        df[self.capacity_col] = df[self.capacity_col] - df[self.capacity_col].iloc[0]
+
+        return df
 
 
     def __len__(self):
@@ -65,7 +73,7 @@ class DatasetV4(Dataset):
     def __getitem__(self, index: int):
         df = self.data[index]
 
-        X_cols = [self.voltage_col, self.temperature_col, self.capacity_col]
+        X_cols = [self.voltage_col, self.temperature_col, self.current_col, self.capacity_col]
         Y_col = self.soc_col
         data_length = len(df[self.time_col])
 
