@@ -1,0 +1,21 @@
+services:
+
+  model_trainer:
+    image: model_trainer
+    container_name: model_fit
+    restart: "no"
+    volumes:
+      - ./:/app
+    command: python main.py
+
+  mlflow:
+    image: model_trainer
+    container_name: mlflow
+    restart: "unless-stopped"
+    volumes:
+      - ./mlruns:/app/mlruns
+    extra_hosts:
+      - "127.0.0.1:0.0.0.0"
+    ports:
+      - "8080:8000"
+    command: mlflow server --host 0.0.0.0 --port 8000
