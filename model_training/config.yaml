@@ -1,0 +1,31 @@
+experiment: overpotential_model_v1
+num_trials: 30
+max_epochs: 50
+max_time: 6
+
+model: # Specify arguments to intiialize model class
+  input_size: 3
+  hidden_size:
+    hyperparameter_type: integer
+    name: hidden_size
+    low: 3
+    high: 30
+  output_size: 1
+  num_lstm_layers:
+    hyperparameter_type: integer
+    name: num_lstm_layers
+    low: 1
+    high: 6
+
+data_module: # Specify arguments to initialize data module class
+  data_directory: "/dataset/processed/" #"../data/processed/"
+  train_split: 0.7
+  val_split: 0.2
+  test_split: 0.1
+
+optimizer:
+  optimizer_algorithm: adam
+  lr: 0.01
+
+trainer:
+  loss_function: rmse

@@ -5,6 +5,7 @@ services:
     container_name: model_fit
     restart: "no"
     volumes:
+      - ../data:/dataset
       - ./:/app
     command: python main.py
 

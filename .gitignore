@@ -1,4 +1,5 @@
 /model_training/training_logs
+/model_training/mlruns
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
